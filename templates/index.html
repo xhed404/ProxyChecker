@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <title>Проверка ProxyServer</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+<div class="page">
+    <div class="card">
+        <h1>Проверка ProxyServer</h1>
+        <p class="subtitle">
+            Введите прокси в формате <code>host:port</code> или с авторизацией
+            <code>http://user:pass@host:port</code>.
+        </p>
+
+        <form id="proxy-form">
+            <label for="proxy">Прокси</label>
+            <input id="proxy" name="proxy" type="text" placeholder="127.0.0.1:8080" required>
+
+            <label for="timeout">Таймаут (сек)</label>
+            <input id="timeout" name="timeout" type="number" min="1" max="60" value="5">
+
+            <button type="submit">Проверить</button>
+        </form>
+
+        <div id="result" class="result result--empty">
+            Введите прокси и нажмите «Проверить».
+        </div>
+    </div>
+
+    <footer>
+        Простое веб-приложение на Python / Flask для быстрой проверки прокси.
+    </footer>
+</div>
+
+<script>
+    const form = document.getElementById('proxy-form');
+    const resultEl = document.getElementById('result');
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(form);
+
+        resultEl.className = 'result result--pending';
+        resultEl.textContent = 'Проверяем прокси...';
+
+        try {
+            const resp = await fetch('/api/check', {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await resp.json();
+
+            if (resp.ok && data.ok) {
+                resultEl.className = 'result result--ok';
+                resultEl.innerHTML = `
+                    <div><strong>Прокси работает</strong></div>
+                    <div>Время отклика: ${data.elapsed_ms ?? '?'} мс</div>
+                    ${data.status_code ? `<div>HTTP статус: ${data.status_code}</div>` : ''}
+                    ${data.ip ? `<div>Видимый IP: ${data.ip}</div>` : ''}
+                `;
+            } else {
+                resultEl.className = 'result result--error';
+                resultEl.innerHTML = `
+                    <div><strong>Прокси не отвечает</strong></div>
+                    <div>${data.error || 'Неизвестная ошибка'}</div>
+                `;
+            }
+        } catch (err) {
+            resultEl.className = 'result result--error';
+            resultEl.textContent = 'Ошибка запроса к серверу: ' + err;
+        }
+    });
+</script>
+</body>
+</html>
+
